@@ -93,5 +93,18 @@ def stations():
 
     return jsonify(list(np.ravel(station_list)))
 
+@app.route("/api/v1.0/tobs")
+def tobs():
+
+    temp_query_date = dt.date(2017, 8, 18) - dt.timedelta(days=365)
+
+    active_station = session.query(measure.station).group_by(measure.station).order_by(func.count(measure.station).desc()).first()
+
+    temp_data = session.query(measure.date, measure.tobs).filter(measure.date >= temp_query_date).filter(measure.station == active_station[0]).all()
+
+    session.close()
+
+    return jsonify(list(np.ravel(temp_data)))
+
 if __name__ == "__main__":
     app.run(debug=True)
