@@ -56,13 +56,42 @@ def precipitation():
 
     query_date = dt.date(2017, 8, 23) - dt.timedelta(days=365)
 
-    year_prec = session.query(measure.prcp, measure.date).filter(measure.date >= query_date).order_by(measure.date).all()
+    year_prec = session.query(measure.date, measure.prcp).filter(measure.date >= query_date).order_by(measure.date).all()
 
     session.close()
 
-    prec_dict = dict([(0.0, item[1]) if item[0] is None else item for item in year_prec])
+    prec_list = [(item[0], 0.0) if item[1] == None else item for item in year_prec]
+
+    prec_dict = {}
+    item_list = []
+    x = prec_list[0][0]
+
+    for item in prec_list:
+
+        if x == item[0]:
+
+            item_list.append(item[1])
+
+        else:
+
+            prec_dict[x] = item_list
+            item_list = []
+            item_list.append(item[1])
+
+        x = item[0]
+
+    prec_dict[x] = item_list
 
     return jsonify(prec_dict)
+
+@app.route("/api/v1.0/stations")
+def stations():
+
+    station_list = session.query(measure.station).group_by(measure.station).order_by(func.count(measure.station).desc()).all()
+
+    session.close()
+
+    return jsonify(list(np.ravel(station_list)))
 
 if __name__ == "__main__":
     app.run(debug=True)
