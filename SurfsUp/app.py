@@ -134,6 +134,44 @@ def start_date(start):
 
         return jsonify({"error": f"Date: {start} not found in database."}), 404
 
+@app.route("/api/v1.0/start-end/<start>/<end>")
+def start_end_date(start, end):
+
+    canon_start = start.replace("-", "")
+    canon_end = end.replace("-", "")
+
+    mm_st = int(canon_start[slice(0, 2)])
+    dd_st = int(canon_start[slice(2, 4)])
+    yyyy_st = int(canon_start[slice(4, 8)])
+
+    mm_ed = int(canon_end[slice(0, 2)])
+    dd_ed = int(canon_end[slice(2, 4)])
+    yyyy_ed = int(canon_end[slice(4, 8)])
+
+    user_start_input = dt.date(yyyy_st, mm_st, dd_st)
+    user_end_input = dt.date(yyyy_ed, mm_ed, dd_ed)
+
+    db_check = list(np.ravel(session.query(measure.date).all()))
+
+    if (user_start_input.strftime("%Y-%m-%d") and user_end_input.strftime("%Y-%m-%d") in db_check) and (user_end_input > user_start_input):
+
+        dates_search = session.query(func.min(measure.tobs), func.max(measure.tobs), func.avg(measure.tobs)).filter(measure.date >= user_start_input, measure.date <= user_end_input).all()
+        
+        session.close()
+
+        return jsonify(list(np.ravel(dates_search)))
+    
+    elif user_start_input.strftime("%Y-%m-%d") and user_end_input.strftime("%Y-%m-%d") not in db_check:
+        
+        session.close()
+
+        return jsonify({"error": f"Date: '{start}' or '{end}' not found in database."}), 404
+    
+    elif user_end_input < user_start_input:
+
+        session.close()
+
+        return jsonify({"error": f"start date '{start}' is later than end date '{end}', null values returned."}), 404
 
 if __name__ == "__main__":
     app.run(debug=True)
