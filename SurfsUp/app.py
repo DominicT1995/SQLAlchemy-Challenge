@@ -88,7 +88,8 @@ def precipitation():
 @app.route("/api/v1.0/stations")
 def stations():
 
-    station_list = session.query(measure.station).group_by(measure.station).order_by(func.count(measure.station).desc()).all()
+    station_list = session.query(measure.station).\
+        group_by(measure.station).order_by(func.count(measure.station).desc()).all()
 
     session.close()
 
@@ -99,13 +100,22 @@ def tobs():
 
     temp_query_date = dt.date(2017, 8, 18) - dt.timedelta(days=365)
 
-    active_station = session.query(measure.station).group_by(measure.station).order_by(func.count(measure.station).desc()).first()
+    active_station = session.query(measure.station).\
+        group_by(measure.station).order_by(func.count(measure.station).desc()).first()
 
-    temp_data = session.query(measure.date, measure.tobs).filter(measure.date >= temp_query_date).filter(measure.station == active_station[0]).all()
+    temp_data = session.query(measure.date, measure.tobs)\
+        .filter(measure.date >= temp_query_date).filter(measure.station == active_station[0]).all()
 
     session.close()
 
-    return jsonify(list(np.ravel(temp_data)))
+    all_temps = []
+    for date, tobs in temp_data:
+        temp_dict = {}
+        temp_dict["date"] = date
+        temp_dict["temperature"] = tobs
+        all_temps.append(temp_dict)
+
+    return jsonify(all_temps)
 
 @app.route("/api/v1.0/start/<start>")
 def start_date(start):
@@ -122,11 +132,20 @@ def start_date(start):
 
     if user_start_input.strftime("%Y-%m-%d") in db_check:
 
-        start_search = session.query(func.min(measure.tobs), func.max(measure.tobs), func.avg(measure.tobs)).filter(measure.date >= user_start_input).all()
+        start_search = session.query(func.min(measure.tobs), func.max(measure.tobs), func.avg(measure.tobs)).\
+            filter(measure.date >= user_start_input).all()
         
         session.close()
 
-        return jsonify(list(np.ravel(start_search)))
+        start_results = []
+        for stat in start_search:
+            start_dict = {}
+            start_dict["min"] = stat[0]
+            start_dict["max"] = stat[1]
+            start_dict["avg"] = stat[2]
+            start_results.append(start_dict)
+
+        return jsonify(start_results)
     
     else:
         
@@ -155,11 +174,20 @@ def start_end_date(start, end):
 
     if (user_start_input.strftime("%Y-%m-%d") and user_end_input.strftime("%Y-%m-%d") in db_check) and (user_end_input > user_start_input):
 
-        dates_search = session.query(func.min(measure.tobs), func.max(measure.tobs), func.avg(measure.tobs)).filter(measure.date >= user_start_input, measure.date <= user_end_input).all()
+        dates_search = session.query(func.min(measure.tobs), func.max(measure.tobs), func.avg(measure.tobs)).\
+            filter(measure.date >= user_start_input, measure.date <= user_end_input).all()
         
         session.close()
 
-        return jsonify(list(np.ravel(dates_search)))
+        dates_results = []
+        for stat in dates_search:
+            dates_dict = {}
+            dates_dict["min"] = stat[0]
+            dates_dict["max"] = stat[1]
+            dates_dict["avg"] = stat[2]
+            dates_results.append(dates_dict)
+
+        return jsonify(dates_results)
     
     elif user_start_input.strftime("%Y-%m-%d") and user_end_input.strftime("%Y-%m-%d") not in db_check:
         
