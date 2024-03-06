@@ -47,8 +47,9 @@ def home():
         f"/api/v1.0/precipitation<br/>"
         f"/api/v1.0/stations<br/>"
         f"/api/v1.0/tobs<br/>"
-        f"/api/v1.0/start/<start><br/>"
-        f"/api/v1.0/start-end/<start>/<end>"
+        f"/api/v1.0/start/&ltstart&gt<br/>"
+        f"/api/v1.0/start-end/&ltstart&gt/&ltend&gt<br/><br/>"
+        f"Dates for &ltstart&gt and &ltend&gt should be formatted as mm-dd-yyyy or mmddyyyy."
     )
 
 @app.route("/api/v1.0/precipitation")
@@ -105,6 +106,34 @@ def tobs():
     session.close()
 
     return jsonify(list(np.ravel(temp_data)))
+
+@app.route("/api/v1.0/start/<start>")
+def start_date(start):
+
+    canon = start.replace("-", "")
+
+    mm = int(canon[slice(0, 2)])
+    dd = int(canon[slice(2, 4)])
+    yyyy = int(canon[slice(4, 8)])
+
+    user_start_input = dt.date(yyyy, mm, dd)
+
+    db_check = list(np.ravel(session.query(measure.date).all()))
+
+    if user_start_input.strftime("%Y-%m-%d") in db_check:
+
+        start_search = session.query(func.min(measure.tobs), func.max(measure.tobs), func.avg(measure.tobs)).filter(measure.date >= user_start_input).all()
+        
+        session.close()
+
+        return jsonify(list(np.ravel(start_search)))
+    
+    else:
+        
+        session.close()
+
+        return jsonify({"error": f"Date: {start} not found in database."}), 404
+
 
 if __name__ == "__main__":
     app.run(debug=True)
